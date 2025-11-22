@@ -1,104 +1,377 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+    <title>Seller Alert</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
     <style>
-        /* ВСТАВЬТЕ СЮДА ВЕСЬ ВАШ CSS СТИЛЬ КОТОРЫЙ ВЫ ХОТИТЕ СОХРАНИТЬ */
-        body { font-family: Arial; margin: 0; padding: 0; background: #f0f2f5; }
-        .tg-header { display: flex; justify-content: space-between; padding: 10px 15px; background: white; }
-        .content-area { padding: 15px; }
-        .welcome-section { padding: 20px 0; border-bottom: 1px solid #e0e0e0; }
-        .logo { font-size: 28px; font-weight: 700; }
-        .account-status { display: flex; align-items: center; gap: 10px; margin-top: 20px; }
-        .add-button { width: 50px; height: 50px; background: #007aff; color: white; border-radius: 50%; text-align: center; line-height: 50px; font-size: 30px; cursor: pointer; }
-        .account-pill { flex-grow: 1; padding: 10px 20px; background: #e9e9eb; border-radius: 25px; text-align: center; }
-        .stats-grid { display: flex; gap: 10px; margin-top: 20px; }
-        .stat-card { background: white; padding: 15px; border-radius: 12px; flex: 1; text-align: center; }
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; }
-        .modal { background: white; padding: 20px; border-radius: 14px; width: 80%; }
+        /* --- СТИЛИ (CSS) --- */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f0f2f5;
+            color: #1c1c1e;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Хедер (имитация) */
+        .tg-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            background: white;
+            border-bottom: 1px solid #e0e0e0;
+            text-align: center;
+            font-size: 16px;
+            color: #007aff;
+        }
+        .tg-header-title { color: #1c1c1e; font-weight: 600; display: flex; flex-direction: column; line-height: 1.2; }
+        .tg-header-title small { font-size: 12px; color: #6a6a6a; font-weight: 400; }
+        .tg-header .dots { font-size: 20px; cursor: pointer; }
+
+        .content-area { padding: 0 15px 20px; }
+
+        /* Приветствие */
+        .welcome-section { padding: 20px 0; border-bottom: 1px solid #e0e0e0; margin-bottom: 20px; }
+        .logo { font-size: 28px; font-weight: 700; margin-bottom: 5px; }
+        .logo span { color: #ff5757; }
+        .welcome-text { font-size: 20px; font-weight: 500; margin: 0 0 20px; }
+
+        /* Статус и Кнопка "+" */
+        .account-status { display: flex; align-items: center; gap: 10px; }
+        
+        .add-button {
+            width: 50px; height: 50px; border-radius: 50%;
+            background: #007aff; color: white;
+            font-size: 30px; line-height: 50px; text-align: center;
+            font-weight: 300; cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 122, 255, 0.3);
+            flex-shrink: 0;
+            transition: transform 0.1s;
+        }
+        .add-button:active { transform: scale(0.95); }
+
+        .account-pill {
+            flex-grow: 1; padding: 10px 20px; background: #e9e9eb;
+            border-radius: 25px; text-align: center;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .account-pill-name {
+            font-size: 16px; margin: 0; font-weight: 600;
+            background-color: black; color: black; border-radius: 4px;
+            height: 18px; width: 80%; margin: 0 auto 2px;
+        }
+        .account-pill-status { font-size: 14px; color: #3c3c43; margin: 0; font-weight: 500; }
+
+        /* Статистика */
+        .stats-section { opacity: 0.5; transition: opacity 0.3s; pointer-events: none; }
+        .stats-section.active { opacity: 1; pointer-events: all; }
+
+        .stats-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px; }
+        .stats-header h2 { font-size: 26px; font-weight: 700; margin: 0; }
+        .stats-header .update-time { font-size: 14px; color: #6a6a6a; font-weight: 400; margin-top: 5px; }
+        
+        .stats-grid { display: flex; gap: 10px; justify-content: space-between; }
+        .stat-card {
+            background: white; padding: 10px; border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            width: calc(33.33% - 7px); box-sizing: border-box; text-align: left; overflow: hidden;
+        }
+        .stat-card h4 { font-size: 14px; color: #6a6a6a; margin: 0 0 5px; font-weight: 500; }
+        .stat-value { font-size: 18px; font-weight: 700; margin: 0 0 10px; color: #1c1c1e; line-height: 1.1; word-wrap: break-word; }
+        
+        .change-pill { width: 100%; padding: 8px 0; text-align: center; font-size: 14px; font-weight: 600; color: white; margin: 0 -10px -10px; }
+        .change-pill.red { background: #ff3b30; }
+        .change-pill.green { background: #34c759; }
+        .change-pill.light-green { background: #6cc644; }
+        .change-pill.neutral { background: #8e8e93; }
+
+        /* --- МОДАЛЬНОЕ ОКНО ДЛЯ ВВОДА ТОКЕНА --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 100;
+            display: none; align-items: center; justify-content: center;
+        }
+        .modal {
+            background: white; width: 85%; max-width: 320px;
+            border-radius: 14px; padding: 20px;
+            text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .modal h3 { margin: 0 0 10px; }
+        .modal input {
+            width: 100%; padding: 10px; margin: 10px 0;
+            border: 1px solid #ccc; border-radius: 8px; font-size: 16px;
+            box-sizing: border-box;
+        }
+        .modal-buttons { display: flex; gap: 10px; margin-top: 10px; }
+        .btn { flex: 1; padding: 10px; border-radius: 8px; font-size: 16px; border: none; cursor: pointer; }
+        .btn-cancel { background: #e9e9eb; color: #000; }
+        .btn-save { background: #007aff; color: white; font-weight: 600; }
+
+        /* Спиннер загрузки */
+        .loader { border: 3px solid #f3f3f3; border-top: 3px solid #007aff; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Уведомления */
+        .notification {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            background: #ff3b30; color: white; padding: 10px 20px;
+            border-radius: 10px; z-index: 1000; display: none;
+        }
     </style>
 </head>
 <body>
+
+    <div class="tg-header">
+        <span onclick="Telegram.WebApp.close()">Закрыть</span>
+        <div class="tg-header-title">Seller Alert<small>мини-приложение</small></div>
+        <span class="dots">&#8942;</span>
+    </div>
+    
     <div class="content-area">
         <div class="welcome-section">
+            <div class="logo">seller<span>:</span>alert</div>
             <p class="welcome-text" id="greeting">Привет!</p>
 
             <div class="account-status">
                 <div class="add-button" onclick="openTokenModal()">+</div>
                 <div class="account-pill">
+                    <div class="account-pill-name" id="shop-name-hidden"></div> 
                     <p class="account-pill-status" id="status-text">Нажмите + для подключения WB</p>
                 </div>
             </div>
         </div>
 
-        <div class="stats-section">
-            <h2>Статистика Wildberries</h2>
+        <div class="stats-section" id="stats-section">
+            <div class="stats-header">
+                <div>
+                    <h2>Статистика</h2>
+                    <p class="update-time" id="last-updated">Подключите API для получения данных</p>
+                </div>
+            </div>
+
             <div class="stats-grid">
                 <div class="stat-card">
                     <h4>Доход</h4>
-                    <p id="val-income">0₽</p>
+                    <p class="stat-value" id="val-income">0₽</p>
+                    <div class="change-pill neutral" id="pill-income">+0₽</div>
                 </div>
+
                 <div class="stat-card">
                     <h4>CTR</h4>
-                    <p id="val-ctr">0%</p>
+                    <p class="stat-value" id="val-ctr">0%</p>
+                    <div class="change-pill neutral" id="pill-ctr">0%</div>
                 </div>
+
                 <div class="stat-card">
                     <h4>ДРР</h4>
-                    <p id="val-drr">0%</p>
+                    <p class="stat-value" id="val-drr">0%</p>
+                    <div class="change-pill neutral" id="pill-drr">0%</div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Модальное окно для ввода токена -->
     <div class="modal-overlay" id="tokenModal">
         <div class="modal">
-            <h3>Введите API токен WB</h3>
-            <input type="text" id="apiTokenInput" placeholder="Ваш токен...">
-            <div style="display: flex; gap: 10px; margin-top: 15px;">
-                <button onclick="closeTokenModal()" style="flex:1; padding:10px; background:#e9e9eb; border:none; border-radius:8px;">Отмена</button>
-                <button onclick="connectToWB()" style="flex:1; padding:10px; background:#007aff; color:white; border:none; border-radius:8px;">Подключить</button>
+            <h3>Подключение WB</h3>
+            <p style="font-size:13px; color:#666;">Введите API токен (Статистика + Контент)</p>
+            <input type="text" id="apiTokenInput" placeholder="Токен здесь...">
+            <div class="modal-buttons">
+                <button class="btn btn-cancel" onclick="closeTokenModal()">Отмена</button>
+                <button class="btn btn-save" onclick="connectToWB()">Подключить</button>
             </div>
         </div>
     </div>
 
+    <!-- Уведомление -->
+    <div class="notification" id="notification"></div>
+
     <script>
-        // Инициализация Telegram Web App
+        // 1. Инициализация Telegram Web App
         const tg = window.Telegram.WebApp;
+        
+        // Инициализируем и раскрываем на весь экран
+        tg.ready();
         tg.expand();
         tg.enableClosingConfirmation();
 
-        // Показываем имя пользователя
-        const user = tg.initDataUnsafe.user;
-        if (user) {
-            document.getElementById('greeting').textContent = `Привет, ${user.first_name || 'друг'}!`;
+        // Функция для получения имени пользователя
+        function getUserName() {
+            try {
+                // Способ 1: Через initData
+                if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                    const user = tg.initDataUnsafe.user;
+                    if (user.first_name) {
+                        return user.first_name;
+                    }
+                    if (user.username) {
+                        return user.username;
+                    }
+                }
+                
+                // Способ 2: Через initData строку (более надежный)
+                const initData = tg.initData;
+                if (initData) {
+                    const params = new URLSearchParams(initData);
+                    const userParam = params.get('user');
+                    if (userParam) {
+                        const user = JSON.parse(decodeURIComponent(userParam));
+                        if (user.first_name) {
+                            return user.first_name;
+                        }
+                    }
+                }
+                
+                // Способ 3: Если ничего не работает
+                return 'друг';
+                
+            } catch (error) {
+                console.log('Error getting username:', error);
+                return 'друг';
+            }
         }
 
-        // Управление модальным окном
+        // Устанавливаем приветствие при загрузке
+        document.addEventListener('DOMContentLoaded', function() {
+            const userName = getUserName();
+            document.getElementById('greeting').textContent = `Привет, ${userName}!`;
+            
+            // Логи для отладки
+            console.log('Telegram WebApp:', tg);
+            console.log('InitDataUnsafe:', tg.initDataUnsafe);
+            console.log('InitData:', tg.initData);
+            console.log('User name:', userName);
+        });
+
+        // --- Управление Модальным окном ---
+        const modal = document.getElementById('tokenModal');
+        const tokenInput = document.getElementById('apiTokenInput');
+
         function openTokenModal() {
-            document.getElementById('tokenModal').style.display = 'flex';
+            modal.style.display = 'flex';
+            tokenInput.focus();
         }
 
         function closeTokenModal() {
-            document.getElementById('tokenModal').style.display = 'none';
+            modal.style.display = 'none';
+            tokenInput.value = '';
         }
 
-        // Подключение к WB (пока заглушка)
-        function connectToWB() {
-            const token = document.getElementById('apiTokenInput').value;
-            if (!token) return alert('Введите токен');
+        // --- Управление уведомлениями ---
+        function showNotification(message, isError = false) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.style.background = isError ? '#ff3b30' : '#34c759';
+            notification.style.display = 'block';
             
-            closeTokenModal();
-            document.getElementById('status-text').textContent = 'Подключено к WB';
-            
-            // Заглушка - здесь будет реальный API запрос
             setTimeout(() => {
-                document.getElementById('val-income').textContent = '154 230₽';
-                document.getElementById('val-ctr').textContent = '2.45%';
-                document.getElementById('val-drr').textContent = '87.3%';
-            }, 1000);
+                notification.style.display = 'none';
+            }, 3000);
         }
+
+        // --- ПОДКЛЮЧЕНИЕ К WB API ---
+        async function connectToWB() {
+            const token = tokenInput.value.trim();
+            if (!token) {
+                showNotification('Введите API токен', true);
+                return;
+            }
+
+            closeTokenModal();
+
+            // Показываем процесс загрузки
+            document.getElementById('status-text').innerHTML = '<span class="loader"></span> Загрузка...';
+            document.getElementById('shop-name-hidden').style.background = 'transparent'; 
+            document.getElementById('shop-name-hidden').innerText = 'Wildberries API';
+            
+            // Активируем блок статистики
+            document.getElementById('stats-section').classList.add('active');
+
+            try {
+                // 🔄 URL вашего сервера (замените на ваш)
+                const SERVER_URL = 'http://localhost:8080/api/wb-stats';
+                
+                // Получаем ID пользователя для отправки на сервер
+                const user = tg.initDataUnsafe?.user;
+                const userId = user ? user.id : null;
+                
+                const response = await fetch(SERVER_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        wb_token: token,
+                        user_id: userId
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Ошибка сервера: ' + response.status);
+                }
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateUI(data.data);
+                    document.getElementById('status-text').textContent = 'Активен';
+                    showNotification('Данные успешно загружены!');
+                } else {
+                    throw new Error(data.error || 'Неизвестная ошибка');
+                }
+            } catch (error) {
+                document.getElementById('status-text').textContent = 'Ошибка подключения';
+                showNotification('Ошибка: ' + error.message, true);
+                console.error('API Error:', error);
+            }
+        }
+
+        // Функция обновления интерфейса с реальными данными
+        function updateUI(data) {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+
+            document.getElementById('last-updated').innerText = `Обновлено сегодня в ${timeString}`;
+
+            // Доход (продажи)
+            document.getElementById('val-income').innerText = `${formatCurrency(data.income)}`;
+            document.getElementById('pill-income').innerText = `${data.income_change >= 0 ? '+' : ''}${formatCurrency(data.income_change)}`;
+            document.getElementById('pill-income').className = `change-pill ${data.income_change >= 0 ? 'green' : 'red'}`;
+
+            // CTR (Click-Through Rate)
+            document.getElementById('val-ctr').innerText = `${data.ctr}%`;
+            document.getElementById('pill-ctr').innerText = `${data.ctr_change >= 0 ? '+' : ''}${data.ctr_change}%`;
+            document.getElementById('pill-ctr').className = `change-pill ${getPillColor(data.ctr_change, 0.1)}`;
+
+            // ДРР (Динамика рейтинга рекомендаций)
+            document.getElementById('val-drr').innerText = `${data.drr}%`;
+            document.getElementById('pill-drr').innerText = `${data.drr_change >= 0 ? '+' : ''}${data.drr_change}%`;
+            document.getElementById('pill-drr').className = `change-pill ${getPillColor(data.drr_change, 0.5)}`;
+        }
+
+        // Вспомогательные функции
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('ru-RU').format(Math.round(amount)) + '₽';
+        }
+
+        function getPillColor(change, threshold) {
+            if (change > threshold) return 'green';
+            if (change < -threshold) return 'red';
+            return 'neutral';
+        }
+
+        // Обработка нажатия Enter в поле ввода
+        tokenInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                connectToWB();
+            }
+        });
     </script>
 </body>
 </html>
